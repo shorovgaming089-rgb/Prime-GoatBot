@@ -18,7 +18,7 @@ async function loadResources() {
     yfont = y.data;
     categoryEmoji = c.data;
   } catch (e) {
-    console.error("[HELP] Resource load failed");
+    console.error("[HELP] Resource load failed:", e.message);
   }
 }
 
@@ -52,11 +52,37 @@ function findCommand(name) {
   return null;
 }
 
+/* ───── Get Usage Guide ───── */
+function getUsageGuide(guide, prefix, commandName) {
+  if (!guide) return "No usage information";
+  
+  try {
+    // If guide is a string
+    if (typeof guide === 'string') {
+      return guide.replace(/{pn}/g, `${prefix}${commandName}`);
+    }
+    
+    // If guide is an object (like {en: "text"})
+    if (typeof guide === 'object' && guide !== null) {
+      // Try to get English guide first, or first available language
+      const guideText = guide.en || guide[Object.keys(guide)[0]] || "No usage";
+      if (typeof guideText === 'string') {
+        return guideText.replace(/{pn}/g, `${prefix}${commandName}`);
+      }
+    }
+    
+    return "No usage information";
+  } catch (error) {
+    console.error("Error parsing guide:", error);
+    return "Error parsing usage guide";
+  }
+}
+
 module.exports = {
   config: {
     name: "help",
     aliases: ["menu"],
-    version: "2.0",
+    version: "2.1", // Updated version
     author: "Saimx69x | fixed by Aphelion",
     role: 0,
     category: "info",
@@ -128,15 +154,19 @@ module.exports = {
       ? c.aliases.join(", ")
       : c.aliases || "None";
 
-    const usage = c.guide
-      ? c.guide.replace(/{pn}/g, `${prefix}${c.name}`)
-      : "No usage";
+    const usage = getUsageGuide(c.guide, prefix, c.name);
+    
+    // Get description - handle both string and object types
+    let description = c.longDescription || c.shortDescription || "N/A";
+    if (typeof description === 'object' && description !== null) {
+      description = description.en || description[Object.keys(description)[0]] || "N/A";
+    }
 
     const msg = `
 ╭─── COMMAND INFO ───╮
 🔹 Name : ${c.name}
 📂 Category : ${(c.category || "UNCATEGORIZED").toUpperCase()}
-📜 Description : ${c.longDescription || c.shortDescription || "N/A"}
+📜 Description : ${description}
 🔁 Aliases : ${aliasText}
 ⚙️ Version : ${c.version || "1.0"}
 🔐 Permission : ${roleText(c.role)}
